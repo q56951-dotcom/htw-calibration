@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>計測機器 校正管理システム</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.7.1/lib/msal-browser.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;background:#f3f4f6;color:#1a1a1a}
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+#login-screen h1{font-size:22px;font-weight:500;color:#1a1a1a}
+#login-screen p{font-size:13px;color:#666}
+.ms-btn{display:inline-flex;align-items:center;gap:10px;padding:10px 20px;background:#0078d4;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-family:inherit}
+.ms-btn:hover{background:#106ebe}
+#app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:17px;font-weight:600;flex:1;color:#1a1a1a}
+.user-info{font-size:12px;color:#666}
+.logout-btn{font-size:12px;padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;color:#666}
+.logout-btn:hover{background:#f3f4f6}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 20px;background:#fff;border-bottom:1px solid #e5e7eb}
+.stat{background:#f9fafb;border-radius:8px;padding:10px 14px;border:1px solid #e5e7eb}
+.stat-label{font-size:11px;color:#6b7280;margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:600;color:#1a1a1a}
+.toolbar{display:flex;gap:8px;padding:12px 20px;background:#fff;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;align-items:center}
+.toolbar input{flex:1;min-width:200px;height:34px;padding:0 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:inherit}
+.fbtn{height:34px;padding:0 12px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#6b7280;cursor:pointer}
+.fbtn.on{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.fbtn:hover{background:#f9fafb}
+.add-btn{height:34px;padding:0 14px;font-size:12px;border:none;border-radius:6px;background:#0078d4;color:#fff;cursor:pointer;margin-left:auto}
+.add-btn:hover{background:#106ebe}
+.list{padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden}
+.card-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.card-head:hover{background:#f9fafb}
+.thumb{width:48px;height:48px;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f3f4f6;position:relative;cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-ph{font-size:10px;color:#9ca3af;text-align:center;line-height:1.4;pointer-events:none}
+.thumb-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;border-radius:8px}
+.thumb:hover .thumb-overlay{display:flex}
+.thumb-overlay span{font-size:9px;color:#fff;font-weight:500;text-align:center;pointer-events:none}
+.card-info{flex:1;min-width:0}
+.card-title{font-size:14px;font-weight:600;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-sub{font-size:12px;color:#6b7280;margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.b-ok{background:#dcfce7;color:#166534}
+.b-warn{background:#fef9c3;color:#854d0e}
+.b-danger{background:#fee2e2;color:#991b1b}
+.b-na{background:#f3f4f6;color:#6b7280}
+.chev{font-size:12px;color:#9ca3af;transition:transform 0.2s;margin-left:4px}
+.chev.open{transform:rotate(90deg)}
+.card-body{display:none;border-top:1px solid #f3f4f6;background:#fafafa}
+.card-body.open{display:block}
+.body-inner{padding:14px 14px 14px 74px}
+.sec-title{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px}
+.sec-title:first-child{margin-top:0}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+.info-row{display:flex;flex-direction:column;gap:2px}
+.info-label{font-size:11px;color:#9ca3af}
+.info-value{font-size:13px;color:#1a1a1a}
+.info-value.warn{color:#b45309;font-weight:500}
+.info-value.danger{color:#dc2626;font-weight:500}
+.info-value.ok{color:#16a34a}
+.hist-wrap{overflow-x:auto;margin-top:4px}
+table.hist{width:100%;border-collapse:collapse;font-size:12px;min-width:500px}
+table.hist th{text-align:left;padding:6px 8px;font-weight:500;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+table.hist td{padding:7px 8px;border-bottom:1px solid #f3f4f6;color:#1a1a1a;vertical-align:middle}
+table.hist tr:last-child td{border-bottom:none}
+table.hist tr:hover td{background:#f9fafb}
+.pdf-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#1d4ed8;padding:2px 6px;border:1px solid #bfdbfe;border-radius:4px;background:#eff6ff;cursor:pointer;text-decoration:none}
+.no-hist{font-size:12px;color:#9ca3af;padding:8px 0}
+.card-actions{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb}
+.act-btn{height:30px;padding:0 12px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;color:#374151}
+.act-btn:hover{background:#f3f4f6}
+.act-btn.primary{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.act-btn.danger{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.qr-hint{margin-top:10px;padding:8px 10px;border:1px dashed #d1d5db;border-radius:6px;font-size:11px;color:#9ca3af}
+.qr-hint code{background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:11px}
+.loading{text-align:center;padding:40px;color:#6b7280;font-size:14px}
+.error-msg{background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:8px;margin:16px 20px;font-size:13px}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:min(540px,100%);max-height:88vh;overflow-y:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal h2{font-size:16px;font-weight:600;margin-bottom:18px}
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;color:#6b7280;margin-bottom:4px;display:block}
+.form-input{width:100%;height:36px;padding:0 10px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;font-family:inherit;color:#1a1a1a;background:#fff}
+.form-input:focus{outline:none;border-color:#0078d4;box-shadow:0 0 0 2px rgba(0,120,212,0.1)}
+select.form-input{cursor:pointer}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb}
+.modal-btn{height:34px;padding:0 16px;font-size:13px;border-radius:6px;cursor:pointer;font-family:inherit}
+.modal-btn.cancel{border:1px solid #d1d5db;background:#fff;color:#374151}
+.modal-btn.save{border:none;background:#0078d4;color:#fff}
+.modal-btn.save:hover{background:#106ebe}
+input[type=file]{display:none}
+/* Detail Modal */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.detail-overlay.open{display:flex}
+.detail-modal{background:#fff;border-radius:12px;width:min(700px,100%);padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);margin:auto}
+.detail-modal-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e5e7eb}
+.detail-photo{width:120px;height:120px;border-radius:10px;border:1px solid #e5e7eb;overflow:hidden;flex-shrink:0;background:#f3f4f6;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.detail-photo img{width:100%;height:100%;object-fit:cover}
+.detail-photo-ph{font-size:12px;color:#9ca3af;text-align:center}
+.detail-modal h2{font-size:18px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.detail-modal-sub{font-size:13px;color:#6b7280}
+.detail-close{margin-left:auto;width:32px;height:32px;border:none;background:#f3f4f6;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.detail-close:hover{background:#e5e7eb}
+.detail-section{margin-bottom:20px}
+.detail-section-title{font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+.detail-row{display:flex;flex-direction:column;gap:2px}
+.detail-label{font-size:11px;color:#9ca3af}
+.detail-value{font-size:13px;color:#1a1a1a}
+.detail-value.ok{color:#16a34a;font-weight:500}
+.detail-value.warn{color:#b45309;font-weight:500}
+.detail-value.danger{color:#dc2626;font-weight:500}
+
+/* Photo zoom overlay */
+.photo-zoom{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;align-items:center;justify-content:center;cursor:zoom-out}
+.photo-zoom.open{display:flex}
+.photo-zoom img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px}
+
+/* Announcement modal */
+.announce-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400;align-items:center;justify-content:center;padding:20px}
+.announce-overlay.open{display:flex}
+.announce-modal{background:#fff;border-radius:12px;width:min(480px,100%);padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.announce-modal h2{font-size:16px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.announce-modal p{font-size:13px;color:#6b7280;margin-bottom:16px}
+.announce-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:6px;background:#fef9c3;border:1px solid #fef08a}
+.announce-item.danger{background:#fee2e2;border-color:#fecaca}
+.announce-item-name{flex:1;font-size:13px;font-weight:500;color:#1a1a1a}
+.announce-item-days{font-size:12px;font-weight:600}
+.announce-item.danger .announce-item-days{color:#dc2626}
+.announce-item .announce-item-days{color:#b45309}
+.announce-close{width:100%;height:36px;border:none;background:#1a1a1a;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px}
+.announce-close:hover{background:#374151}
+
+/* Hist toggle button on left */
+.hist-toggle-btn{font-size:12px;padding:2px 10px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;color:#6b7280;margin-left:8px}
+.hist-toggle-btn:hover{background:#f3f4f6}
+
+.editable{cursor:pointer;border-radius:4px;padding:1px 4px;margin:-1px -4px}
+.editable:hover{background:#f3f4f6}
+.editable-input{font-size:13px;border:1px solid #0078d4;border-radius:4px;padding:2px 6px;width:100%;font-family:inherit;background:#fff;color:#1a1a1a}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="10" fill="#0078d4"/><path d="M12 34V14h8l4 12 4-12h8v20h-5V21l-5 13h-4l-5-13v13z" fill="#fff"/></svg>
+  <h1>計測機器 校正管理システム</h1>
+  <p>Microsoft アカウントでサインインしてください</p>
+  <button class="ms-btn" onclick="login()">
+    <svg width="18" height="18" viewBox="0 0 18 18"><rect width="8.5" height="8.5" fill="#f25022"/><rect x="9.5" width="8.5" height="8.5" fill="#7fba00"/><rect y="9.5" width="8.5" height="8.5" fill="#00a4ef"/><rect x="9.5" y="9.5" width="8.5" height="8.5" fill="#ffb900"/></svg>
+    Microsoft でサインイン
+  </button>
+  <div id="login-error" style="color:#dc2626;font-size:12px;display:none"></div>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <div class="topbar">
+    <h1>計測機器 校正管理システム</h1>
+    <span class="user-info" id="user-name"></span>
+    <button class="logout-btn" onclick="logout()">サインアウト</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">管理総数</div><div class="stat-value" id="s-all">—</div></div>
+    <div class="stat"><div class="stat-label">校正対象</div><div class="stat-value" id="s-act">—</div></div>
+    <div class="stat"><div class="stat-label" style="color:#854d0e">30日以内</div><div class="stat-value" id="s-warn" style="color:#b45309">—</div></div>
+    <div class="stat"><div class="stat-label" style="color:#991b1b">期限超過</div><div class="stat-value" id="s-over" style="color:#dc2626">—</div></div>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="儀器名・管理番号で検索...">
+    <button class="fbtn on" data-f="all">すべて</button>
+    <button class="fbtn" data-f="active">校正対象</button>
+    <button class="fbtn" data-f="warn">要注意</button>
+    <button class="add-btn" onclick="openAddModal()">＋ 機器追加</button>
+  </div>
+  <div id="list" class="list"><div class="loading">データを読み込み中...</div></div>
+</div>
+
+<!-- Detail Modal -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail()">
+<div class="detail-modal" onclick="event.stopPropagation()">
+  <div class="detail-modal-header">
+    <div class="detail-photo" id="detail-photo" onclick="zoomPhoto(currentDetailPhotoUrl)">
+      <span class="detail-photo-ph">No Photo</span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <h2 id="detail-title"></h2>
+      <div class="detail-modal-sub" id="detail-sub"></div>
+      <div style="margin-top:8px" id="detail-badge"></div>
+    </div>
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">基本情報</div>
+    <div class="detail-grid" id="detail-info"></div>
+  </div>
+  <div class="detail-section">
+    <div class="detail-section-title">校正履歴</div>
+    <div style="overflow-x:auto">
+      <table class="hist" id="detail-hist-table">
+        <thead><tr><th>校正日</th><th>校正機関</th><th>結果</th><th>判定</th><th>次回予定</th><th>書類</th><th></th></tr></thead>
+        <tbody id="detail-hist-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:4px">
+    <button class="act-btn primary" id="detail-add-hist-btn">＋ 校正記録を追加</button>
+    <button class="act-btn" id="detail-edit-btn">✎ 編集</button>
+  </div>
+</div>
+</div>
+
+<!-- Photo Zoom -->
+<div class="photo-zoom" id="photo-zoom" onclick="closeZoom()">
+  <img id="photo-zoom-img" src="" alt="">
+</div>
+
+<!-- Announcement Modal -->
+<div class="announce-overlay" id="announce-overlay">
+<div class="announce-modal">
+  <h2>⚠️ 校正期限のお知らせ</h2>
+  <p>以下の機器は30日以内に校正が必要です</p>
+  <div id="announce-list"></div>
+  <button class="announce-close" onclick="closeAnnounce()">確認しました</button>
+</div>
+</div>
+
+
+<!-- Edit History Modal -->
+<div class="overlay" id="edit-hist-overlay">
+<div class="modal">
+  <h2>校正記録を編集</h2>
+  <input type="hidden" id="eh-sp-id">
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="eh-date"></div>
+    <div class="form-group"><label class="form-label">校正機関</label><input class="form-input" id="eh-org" placeholder="SGS / 自社..."></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">校正結果</label><input class="form-input" id="eh-result" placeholder="例：外径：0.00"></div>
+    <div class="form-group"><label class="form-label">判定</label>
+      <select class="form-input" id="eh-judge"><option value="OK">OK</option><option value="NG">NG</option></select>
+    </div>
+  </div>
+  <div class="form-group"><label class="form-label">次回校正予定日</label><input class="form-input" type="date" id="eh-next"></div>
+  <div class="form-group">
+    <label class="form-label">校正書類URL（OneDriveのリンクを貼り付け）</label>
+    <input class="form-input" id="eh-fileurl" placeholder="https://hayakawacompany.sharepoint.com/...">
+  </div>
+  <div class="modal-actions">
+    <button class="modal-btn cancel" onclick="closeEditHistModal()">キャンセル</button>
+    <button class="modal-btn save" onclick="saveEditHist()">保存</button>
+  </div>
+</div>
+</div>
+<!-- Add/Edit Modal -->
+<div class="overlay" id="modal-overlay">
+<div class="modal">
+  <h2 id="modal-title">機器を追加</h2>
+  <input type="hidden" id="f-sp-id">
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">管理番号 *</label><input class="form-input" id="f-id" placeholder="HTW-ME024"></div>
+    <div class="form-group"><label class="form-label">品名 *</label><input class="form-input" id="f-name" placeholder="デジタルノギス"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">規格型式</label><input class="form-input" id="f-spec" placeholder="例：19811 / 200mm"></div>
+    <div class="form-group"><label class="form-label">製造番号</label><input class="form-input" id="f-sn" placeholder="例：ABC12345"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">仕入先</label><input class="form-input" id="f-supplier" placeholder="例：シンワ"></div>
+    <div class="form-group"><label class="form-label">購入日</label><input class="form-input" type="date" id="f-purchase"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">校正周期</label>
+      <select class="form-input" id="f-cycle">
+        <option>1年</option><option>2年</option><option>半年</option><option>校正不要</option><option>管理外</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">保管場所</label><input class="form-input" id="f-loc" placeholder="例：計測室 棚A"></div>
+  </div>
+  <div class="form-group"><label class="form-label">管理者</label><input class="form-input" id="f-manager" placeholder="例：魏誠志"></div>
+  <div class="form-group"><label class="form-label">写真URL（OneDriveの直接リンク）</label><input class="form-input" id="f-photo" placeholder="https://..."></div>
+  <div class="form-group"><label class="form-label">備考</label><input class="form-input" id="f-note"></div>
+  <div class="modal-actions">
+    <button class="modal-btn cancel" onclick="closeModal()">キャンセル</button>
+    <button class="modal-btn save" onclick="saveItem()">保存</button>
+  </div>
+</div>
+</div>
+
+<!-- History Modal -->
+<div class="overlay" id="hist-overlay">
+<div class="modal">
+  <h2>校正記録を追加</h2>
+  <input type="hidden" id="h-inst-id">
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="h-date"></div>
+    <div class="form-group"><label class="form-label">校正機関</label><input class="form-input" id="h-org" placeholder="SGS / 自社..."></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">校正結果</label><input class="form-input" id="h-result" placeholder="例：外径：0.00"></div>
+    <div class="form-group"><label class="form-label">判定</label>
+      <select class="form-input" id="h-judge"><option value="OK">OK</option><option value="NG">NG</option></select>
+    </div>
+  </div>
+  <div class="form-group"><label class="form-label">次回校正予定日</label><input class="form-input" type="date" id="h-next"></div>
+  <div class="form-group">
+    <label class="form-label">校正書類URL（OneDriveのリンクを貼り付け）</label>
+    <input class="form-input" id="h-fileurl" placeholder="https://hayakawacompany.sharepoint.com/...">
+  </div>
+  <div class="modal-actions">
+    <button class="modal-btn cancel" onclick="closeHistModal()">キャンセル</button>
+    <button class="modal-btn save" onclick="saveHist()">追加</button>
+  </div>
+</div>
+</div>
+
+<input type="file" id="photo-input" accept="image/*">
+
+<script>
+// ── Config ────────────────────────────────────────────
+const CONFIG = {
+  clientId: "4d409e9c-29d0-4d61-b6f1-5acef4c096fa",
+  tenantId: "3e337368-0823-4d37-919f-cfe959c07665",
+  siteUrl: "https://hayakawacompany.sharepoint.com/sites/msteams_7f5578",
+  listId: "49e17844-eb0d-4daf-b578-aa678c431364",
+  histListId: "e8e15ba4-26d2-4f3f-b0f0-b3fb6f9fbe42"
+};
+
+const msalConfig = {
+  auth: {
+    clientId: CONFIG.clientId,
+    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+    redirectUri: window.location.href.split('?')[0].split('#')[0]
+  },
+  cache: { cacheLocation: "sessionStorage" }
+};
+
+const scopes = ["https://hayakawacompany.sharepoint.com/AllSites.Manage", "User.Read"];
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+let account = null;
+let instruments = [];
+const pdfUrls = {};
+let histories = [];
+let openId = null;
+let filter = "all";
+let search = "";
+let editingSpId = null;
+let photoTargetId = null;
+
+// ── Auth ──────────────────────────────────────────────
+async function init() {
+  await msalInstance.initialize();
+  const resp = await msalInstance.handleRedirectPromise();
+  if (resp) account = resp.account;
+  else {
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) account = accounts[0];
+  }
+  if (account) showApp();
+}
+
+async function login() {
+  try {
+    await msalInstance.loginRedirect({ scopes });
+  } catch(e) {
+    document.getElementById("login-error").style.display = "block";
+    document.getElementById("login-error").textContent = e.message;
+  }
+}
+
+function logout() {
+  msalInstance.logoutRedirect({ account });
+}
+
+async function getToken() {
+  try {
+    const r = await msalInstance.acquireTokenSilent({ scopes, account });
+    return r.accessToken;
+  } catch {
+    const r = await msalInstance.acquireTokenPopup({ scopes });
+    return r.accessToken;
+  }
+}
+
+async function spFetch(url, options = {}) {
+  const token = await getToken();
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/json;odata=nometadata",
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (res.status === 204 || res.status === 200 && options.method === "DELETE") return null;
+  const text = await res.text();
+  if (!text) return null;
+  return JSON.parse(text);
+}
+
+// ── Data ──────────────────────────────────────────────
+async function loadData() {
+  const base = `${CONFIG.siteUrl}/_api/web/lists`;
+  const instResp = await spFetch(`${base}(guid'${CONFIG.listId}')/items?$top=500`);
+  instruments = instResp.value || [];
+  try {
+    const histResp = await spFetch(`${base}(guid'${CONFIG.histListId}')/items?$top=2000`);
+    histories = histResp.value || [];
+  } catch(e) {
+    histories = [];
+    console.warn('hist load failed:', e);
+  }
+}
+
+function getHistories(instId) {
+  return histories.filter(h => h.Title === instId).sort((a,b) => new Date(b.校正日) - new Date(a.校正日));
+}
+
+function getLastHist(instId) {
+  const h = getHistories(instId);
+  return h.length ? h[0] : null;
+}
+
+const today = new Date();
+function daysDiff(ds) {
+  if (!ds) return null;
+  return Math.floor((new Date(ds) - today) / 86400000);
+}
+
+function getStatusInfo(inst) {
+  const cycle = inst.field_10 || "";
+  if (cycle === "校正不要" || cycle === "管理外") return { cls: "b-na", label: cycle };
+  const last = getLastHist(inst.Title);
+  if (!last || !last.field_11) return { cls: "b-na", label: "未校正" };
+  const d = daysDiff(last.field_11);
+  if (d < 0) return { cls: "b-danger", label: "期限超過" };
+  if (d <= 30) return { cls: "b-warn", label: `残${d}日` };
+  return { cls: "b-ok", label: "OK" };
+}
+
+function getNextDateClass(inst) {
+  const last = getLastHist(inst.Title);
+  if (!last || !last.field_11) return "";
+  const d = daysDiff(last.field_11);
+  if (d === null) return "";
+  if (d < 0) return "danger";
+  if (d <= 30) return "warn";
+  return "ok";
+}
+
+// ── Render ────────────────────────────────────────────
+function render() {
+  const cycle_na = ["校正不要","管理外"];
+  const filtered = instruments.filter(i => {
+    const si = getStatusInfo(i);
+    if (filter === "active" && cycle_na.includes(i.field_10)) return false;
+    if (filter === "warn" && si.cls !== "b-warn" && si.cls !== "b-danger") return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!(i.field_2||"").toLowerCase().includes(q) && !(i.Title||"").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const list = document.getElementById("list");
+  if (!filtered.length) { list.innerHTML = '<div class="loading">該当する機器がありません</div>'; updateStats(); return; }
+
+  list.innerHTML = filtered.map(inst => {
+    const si = getStatusInfo(inst);
+    const isOpen = openId === inst.Title;
+    const last = getLastHist(inst.Title);
+    const hists = getHistories(inst.Title);
+    const nc = getNextDateClass(inst);
+
+    const histRows = hists.length ? hists.map((h,hi) => {
+      const pdfKey = `pdf_${h.ID||h.Id}`;
+      if(h.OData__x66f8__x985e_URL) pdfUrls[pdfKey] = h.OData__x66f8__x985e_URL;
+      return `<tr>
+        <td>${h.field_6?h.field_6.split('T')[0]:"—"}</td>
+        <td>${h.field_5||"—"}</td>
+        <td style="max-width:130px">${h.field_9||"—"}</td>
+        <td>${h.field_10==="OK"?`<span class="badge b-ok">OK`:`<span class="badge b-danger">${h.field_10||"—"}</span>`}</span></td>
+        <td>${h.field_11?h.field_11.split('T')[0]:"—"}</td>
+        <td>${h.OData__x66f8__x985e_URL?`<button class="pdf-link" onclick="event.stopPropagation();openPdf('${pdfKey}')">📄 開く</button>`:`<span style="color:#9ca3af;font-size:11px">ダブルクリックで追加`}</span></td>
+        <td style="white-space:nowrap">
+          <button class="act-btn primary" style="padding:2px 8px;font-size:11px;height:24px;margin-right:4px" onclick="event.stopPropagation();openEditHistModal(${h.ID||h.Id})">編集</button>
+          <button class="act-btn danger" style="padding:2px 8px;font-size:11px;height:24px" onclick="event.stopPropagation();deleteHist(${h.ID||h.Id},'${inst.Title}')">削除</button>
+        </td>
+      </tr>`;}).join("") : `<tr><td colspan="6" class="no-hist">校正履歴なし</td></tr>`;
+
+    return `<div class="card" id="card-${inst.Title}">
+      <div class="card-head" onclick="toggle('${inst.Title}')">
+        <div class="thumb" onclick="event.stopPropagation();zoomPhoto('${inst.OData__x5199__x771f_URL||""}')">
+          ${inst.OData__x5199__x771f_URL ? `<img src="${inst.OData__x5199__x771f_URL}" alt="">` : `<span class="thumb-ph">No<br>Photo</span>`}
+          <div class="thumb-overlay"><span>${inst.OData__x5199__x771f_URL?"🔍 拡大":"No Photo"}</span></div>
+        </div>
+        <div class="card-info" style="cursor:pointer" onclick="event.stopPropagation();openDetail('${inst.Title}')">
+          <div class="card-title">${inst.Title}　${inst.field_2||""}</div>
+          <div class="card-sub">校正機関: ${last?last.field_5||"—":"—"}　周期: ${inst.field_10||"—"}${inst.field_8?`　📍 ${inst.field_8}`:""}</div>
+        </div>
+        <span class="badge ${si.cls}">${si.label}</span>
+        <span class="chev ${isOpen?"open":""}">&#9656;</span>
+      </div>
+      <div class="card-body ${isOpen?"open":""}">
+        <div class="body-inner">
+          <div class="sec-title">基本情報</div>
+          <div class="info-grid">
+            <div class="info-row"><span class="info-label">管理番号</span><span class="info-value">${inst.Title||"—"}</span></div>
+            <div class="info-row"><span class="info-label">製造番号</span><span class="info-value">${inst.field_4||"—"}</span></div>
+            <div class="info-row"><span class="info-label">規格型式</span><span class="info-value">${inst.field_3||"—"}</span></div>
+            <div class="info-row"><span class="info-label">仕入先</span><span class="info-value">${inst.field_5||"—"}</span></div>
+            <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
+            <div class="info-row" style="grid-column:1/-1"><span class="info-label">備考</span><span class="info-value">${inst.field_12||"—"}</span></div>
+          </div>
+          <div class="sec-title" style="margin-top:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>校正履歴</span>
+            <span style="font-size:11px;color:#9ca3af;font-weight:400">(${hists.length}件)</span>
+            <button class="hist-toggle-btn" onclick="event.stopPropagation();toggleHist('${inst.Title}')" id="hist-btn-${inst.Title}">${hists.length>1?"▼ 展開":"▼ 表示"}</button>
+            ${hists.length>0?`<button class="hist-toggle-btn" style="color:#dc2626;border-color:#fecaca;margin-left:auto" onclick="event.stopPropagation();deleteAllHist('${inst.Title}')">🗑 全て削除</button>`:""}
+          </div>
+          <div id="hist-wrap-${inst.Title}" style="display:${hists.length<=1?'block':'none'}">
+            <div class="hist-wrap">
+              <table class="hist">
+                <thead><tr><th>校正日</th><th>校正機関</th><th>結果</th><th>判定</th><th>次回予定</th><th>書類</th><th></th></tr></thead>
+                <tbody>${histRows}</tbody>
+              </table>
+            </div>
+          </div>
+          <div id="hist-latest-${inst.Title}" style="display:${hists.length<=1?'none':'block'}">
+            <table class="hist">
+              <thead><tr><th>校正日</th><th>校正機関</th><th>結果</th><th>判定</th><th>次回予定</th><th>書類</th><th></th></tr></thead>
+              <tbody>${hists.length?`
+                <tr>
+                  <td>${hists[0].field_6?hists[0].field_6.split('T')[0]:"—"}</td>
+                  <td>${hists[0].field_5||"—"}</td>
+                  <td>${hists[0].field_9||"—"}</td>
+                  <td><span class="badge ${hists[0].field_10==="OK"?"b-ok":"b-danger"}">${hists[0].field_10||"—"}</span></td>
+                  <td>${hists[0].field_11?hists[0].field_11.split('T')[0]:"—"}</td>
+                  <td>${hists[0].field_12?`<button class="pdf-link" onclick="event.stopPropagation();openPdf('pdf_${hists[0].ID||hists[0].Id}')">📄 開く</button>`:`<span style="color:#9ca3af">—</span>`}</td>
+                </tr>
+                <tr><td colspan="6" style="text-align:center;padding:4px;font-size:11px;color:#9ca3af">他 ${hists.length-1} 件の履歴あり</td></tr>
+              `:""}
+              </tbody>
+            </table>
+          </div>
+          <div class="card-actions">
+            <button class="act-btn primary" onclick="openHistModal('${inst.Title}')">＋ 校正記録を追加</button>
+            <button class="act-btn" onclick="openEditModal('${inst.Title}')">✎ 編集</button>
+          </div>
+          <div class="qr-hint">QRコード用URL: <code>${window.location.href.split('#')[0]}#${inst.Title}</code></div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  updateStats();
+
+  const hash = window.location.hash.replace("#","");
+  if (hash && !openId) {
+    openId = hash;
+    render();
+    setTimeout(()=>{
+      const el = document.getElementById("card-"+hash);
+      if (el) el.scrollIntoView({behavior:"smooth",block:"start"});
+    },100);
+  }
+}
+
+function updateStats() {
+  const na = ["校正不要","管理外"];
+  const active = instruments.filter(i => !na.includes(i.field_10));
+  const warn = active.filter(i => getStatusInfo(i).cls === "b-warn");
+  const over = active.filter(i => getStatusInfo(i).cls === "b-danger");
+  document.getElementById("s-all").textContent = instruments.length;
+  document.getElementById("s-act").textContent = active.length;
+  document.getElementById("s-warn").textContent = warn.length;
+  document.getElementById("s-over").textContent = over.length;
+}
+
+
+function toggleHist(id) {
+  const wrap = document.getElementById("hist-wrap-"+id);
+  const btn = document.getElementById("hist-btn-"+id);
+  if(!wrap||!btn) return;
+  const isOpen = wrap.style.display !== "none";
+  wrap.style.display = isOpen ? "none" : "block";
+  btn.textContent = isOpen ? "▼ 展開" : "▲ 折りたたむ";
+}
+
+function toggle(id) {
+  openId = openId === id ? null : id;
+  window.location.hash = openId || "";
+  render();
+}
+
+// ── CRUD ──────────────────────────────────────────────
+
+async function editField(e, instId, fieldName, el) {
+  e.stopPropagation();
+  const oldVal = el.textContent === "—" ? "" : el.textContent;
+  const input = document.createElement("input");
+  input.className = "editable-input";
+  input.value = oldVal;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  async function save() {
+    const newVal = input.value.trim();
+    const span = document.createElement("span");
+    span.className = "info-value editable";
+    span.textContent = newVal || "—";
+    span.ondblclick = (ev) => editField(ev, instId, fieldName, span);
+    input.replaceWith(span);
+    if(newVal === oldVal) return;
+    try {
+      const inst = instruments.find(i => i.Title === instId);
+      const spId = inst.ID || inst.Id;
+      const base = `${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.listId}')/items`;
+      await spFetch(`${base}(${spId})`, {
+        method: "PATCH",
+        headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+        body: JSON.stringify({[fieldName.startsWith("_x")?"OData__"+fieldName:fieldName]: newVal})
+      });
+      inst[fieldName] = newVal;
+    if(fieldName==='_x5199__x771f_URL') inst['OData__x5199__x771f_URL']=newVal;
+    } catch(err) { alert("保存に失敗しました: "+err.message); }
+  }
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", e => { if(e.key==="Enter") input.blur(); if(e.key==="Escape"){input.value=oldVal;input.blur();} });
+}
+
+
+
+let currentDetailPhotoUrl = "";
+
+function openDetail(instId) {
+  const inst = instruments.find(i => i.Title === instId);
+  if(!inst) return;
+  const si = getStatusInfo(inst);
+  const last = getLastHist(instId);
+  const hists = getHistories(instId);
+  const nc = getNextDateClass(inst);
+
+  // Photo
+  currentDetailPhotoUrl = inst.OData__x5199__x771f_URL || "";
+  const photoEl = document.getElementById("detail-photo");
+  if(inst.OData__x5199__x771f_URL) {
+    photoEl.innerHTML = `<img src="${inst.OData__x5199__x771f_URL}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+  } else {
+    photoEl.innerHTML = `<span class="detail-photo-ph">No Photo</span>`;
+  }
+
+  // Header
+  document.getElementById("detail-title").textContent = `${inst.Title}　${inst.field_2||""}`;
+  document.getElementById("detail-sub").textContent = `校正機関: ${last?last.field_5||"—":"—"}　周期: ${inst.field_10||"—"}${inst.field_8?"　📍 "+inst.field_8:""}`;
+  document.getElementById("detail-badge").innerHTML = `<span class="badge ${si.cls}">${si.label}</span>`;
+
+  // Info grid
+  document.getElementById("detail-info").innerHTML = `
+    <div class="detail-row"><span class="detail-label">管理番号</span><span class="detail-value">${inst.Title||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">製造番号</span><span class="detail-value">${inst.field_4||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">規格型式</span><span class="detail-value">${inst.field_3||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">仕入先</span><span class="detail-value">${inst.field_5||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">前回校正日</span><span class="detail-value">${last?last.field_6?last.field_6.split("T")[0]:"—":"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">次回校正予定日</span><span class="detail-value ${nc}">${last?last.field_11?last.field_11.split("T")[0]:"—":"—"}</span></div>
+    ${inst.field_12?`<div class="detail-row" style="grid-column:1/-1"><span class="detail-label">備考</span><span class="detail-value">${inst.field_12}</span></div>`:""}
+  `;
+
+  // Hist table
+  const detailHistRows = hists.length ? hists.map(h => {
+    const pdfKey = `pdf_${h.ID||h.Id}`;
+    if(h.OData__x66f8__x985e_URL) pdfUrls[pdfKey] = h.OData__x66f8__x985e_URL;
+    return `<tr>
+      <td>${h.field_6?h.field_6.split("T")[0]:"—"}</td>
+      <td>${h.field_5||"—"}</td>
+      <td>${h.field_9||"—"}</td>
+      <td><span class="badge ${h.field_10==="OK"?"b-ok":"b-danger"}">${h.field_10||"—"}</span></td>
+      <td>${h.field_11?h.field_11.split("T")[0]:"—"}</td>
+      <td>${h.OData__x66f8__x985e_URL?`<button class="pdf-link" onclick="openPdf('`+pdfKey+`')">📄 開く</button>`:"—"}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:12px">校正履歴なし</td></tr>`;
+  document.getElementById("detail-hist-body").innerHTML = detailHistRows;
+
+  // Buttons
+  document.getElementById("detail-add-hist-btn").onclick = () => { closeDetail(); openHistModal(instId); };
+  document.getElementById("detail-edit-btn").onclick = () => { closeDetail(); openEditModal(instId); };
+
+  document.getElementById("detail-overlay").classList.add("open");
+}
+
+function closeDetail() {
+  document.getElementById("detail-overlay").classList.remove("open");
+}
+
+function zoomPhoto(url) {
+  if(!url) return;
+  document.getElementById("photo-zoom-img").src = url;
+  document.getElementById("photo-zoom").classList.add("open");
+}
+
+function closeZoom() {
+  document.getElementById("photo-zoom").classList.remove("open");
+}
+
+function showAnnounce() {
+  const na = ["校正不要","管理外"];
+  const items = instruments.filter(i => {
+    if(na.includes(i.field_10)) return false;
+    const si = getStatusInfo(i);
+    return si.cls === "b-warn" || si.cls === "b-danger";
+  }).map(i => {
+    const last = getLastHist(i.Title);
+    const d = last ? daysDiff(last.field_11) : null;
+    return {inst:i, days:d, si:getStatusInfo(i)};
+  }).sort((a,b) => (a.days||0) - (b.days||0));
+
+  if(!items.length) return;
+
+  const list = document.getElementById("announce-list");
+  list.innerHTML = items.map(({inst,days,si}) => `
+    <div class="announce-item ${si.cls==="b-danger"?"danger":""}">
+      <span class="announce-item-name">${inst.Title}　${inst.field_2||""}</span>
+      <span class="announce-item-days">${days<0?"期限超過":"残"+days+"日"}</span>
+    </div>
+  `).join("");
+  document.getElementById("announce-overlay").classList.add("open");
+}
+
+function closeAnnounce() {
+  document.getElementById("announce-overlay").classList.remove("open");
+}
+
+// Also update clickThumb to open edit modal for photo
+
+async function deleteHist(histSpId, instId) {
+  const h = histories.find(x => (x.ID||x.Id) === histSpId);
+  const dateStr = h && h.field_6 ? h.field_6.split('T')[0] : histSpId;
+  if(!confirm(`校正履歴「${dateStr}」を削除してもよいですか？\nこの操作は元に戻せません。`)) return;
+  try {
+    await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${histSpId})`, {
+      method: "DELETE",
+      headers: {"IF-MATCH":"*"}
+    });
+    histories = histories.filter(x => (x.ID||x.Id) !== histSpId);
+    render();
+  } catch(e) { alert("削除に失敗しました: "+e.message); }
+}
+
+async function deleteAllHist(instId) {
+  const hists = getHistories(instId);
+  if(!hists.length) return;
+  const inst = instruments.find(i => i.Title === instId);
+  const name = inst ? (inst.field_2||inst.Title) : instId;
+  if(!confirm(`「${name}」の校正履歴 ${hists.length}件を全て削除してもよいですか？\nこの操作は元に戻せません。`)) return;
+  try {
+    await Promise.all(hists.map(h =>
+      spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${h.ID||h.Id})`, {
+        method: "DELETE",
+        headers: {"IF-MATCH":"*"}
+      })
+    ));
+    histories = histories.filter(h => h.Title !== instId);
+    render();
+  } catch(e) { alert("削除に失敗しました: "+e.message); }
+}
+
+
+function openEditHistModal(histSpId) {
+  const h = histories.find(x => (x.ID||x.Id) === histSpId);
+  if(!h) return;
+  document.getElementById("eh-sp-id").value = histSpId;
+  document.getElementById("eh-date").value = h.field_6 ? h.field_6.split('T')[0] : "";
+  document.getElementById("eh-org").value = h.field_5 || "";
+  document.getElementById("eh-result").value = h.field_9 || "";
+  document.getElementById("eh-judge").value = h.field_10 || "OK";
+  document.getElementById("eh-next").value = h.field_11 ? h.field_11.split('T')[0] : "";
+  document.getElementById("eh-fileurl").value = h.OData__x66f8__x985e_URL || "";
+  document.getElementById("edit-hist-overlay").classList.add("open");
+}
+
+function closeEditHistModal() {
+  document.getElementById("edit-hist-overlay").classList.remove("open");
+}
+
+async function saveEditHist() {
+  const histSpId = parseInt(document.getElementById("eh-sp-id").value);
+  const date = document.getElementById("eh-date").value;
+  if(!date) { alert("校正日は必須です"); return; }
+  const body = {
+    field_5: document.getElementById("eh-org").value.trim(),
+    field_6: date || null,
+    field_9: document.getElementById("eh-result").value.trim(),
+    field_10: document.getElementById("eh-judge").value,
+    field_11: document.getElementById("eh-next").value || null,
+    OData__x66f8__x985e_URL: document.getElementById("eh-fileurl").value.trim()
+  };
+  try {
+    await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${histSpId})`, {
+      method: "PATCH",
+      headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+      body: JSON.stringify(body)
+    });
+    // Update local cache
+    const h = histories.find(x => (x.ID||x.Id) === histSpId);
+    if(h) {
+      h.field_5 = body.field_5;
+      h.field_6 = body.field_6;
+      h.field_9 = body.field_9;
+      h.field_10 = body.field_10;
+      h.field_11 = body.field_11;
+      h.OData__x66f8__x985e_URL = body.OData__x66f8__x985e_URL;
+    }
+    closeEditHistModal();
+    render();
+  } catch(e) { alert("保存に失敗しました: "+e.message); }
+}
+
+function openPdf(key) {
+  const url = pdfUrls[key];
+  if(url) window.open(url, '_blank');
+  else alert('URLが設定されていません');
+}
+
+async function editHistField(e, histSpId, fieldName, el, inputType) {
+  e.stopPropagation();
+  const oldText = el.innerHTML;
+  const oldVal = fieldName==='_x66f8__x985e_URL' ? (el.querySelector('a')?el.querySelector('a').dataset.url:"") :
+                 fieldName==='field_10' ? (el.querySelector('.badge')?el.querySelector('.badge').textContent:"OK") :
+                 (el.textContent==="—"?"":el.textContent);
+  let input;
+  if(inputType==='select') {
+    input = document.createElement("select");
+    input.className = "editable-input";
+    input.style.width = "80px";
+    ["OK","NG"].forEach(v=>{
+      const opt=document.createElement("option");
+      opt.value=v; opt.textContent=v;
+      if(v===oldVal) opt.selected=true;
+      input.appendChild(opt);
+    });
+  } else {
+    input = document.createElement("input");
+    input.className = "editable-input";
+    input.type = inputType==='date' ? 'date' : 'text';
+    input.value = oldVal;
+    if(inputType==='date' && oldVal) input.value = oldVal;
+  }
+  el.innerHTML="";
+  el.appendChild(input);
+  input.focus();
+
+  async function save() {
+    const newVal = input.value.trim();
+    if(fieldName==='field_10') {
+      el.innerHTML = newVal==="OK"?`<span class="badge b-ok">OK</span>`:`<span class="badge b-danger">${newVal}</span>`;
+    } else if(fieldName==='_x66f8__x985e_URL') {
+      const pKey=`pdf_${histSpId}`; pdfUrls[pKey]=newVal;
+      el.innerHTML = newVal?`<button class="pdf-link" onclick="event.stopPropagation();openPdf('${pKey}')">📄 開く</button>`:`<span style="color:#9ca3af;font-size:11px">ダブルクリックで追加</span>`;
+    } else {
+      el.textContent = newVal||"—";
+    }
+    el.className = "editable";
+    el.ondblclick = (ev) => editHistField(ev, histSpId, fieldName, el, inputType);
+    if(newVal === oldVal) return;
+    try {
+      const base = `${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items`;
+      await spFetch(`${base}(${histSpId})`, {
+        method: "PATCH",
+        headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+        body: JSON.stringify({[fieldName.startsWith("_x")?"OData__"+fieldName:fieldName]: newVal || null})
+      });
+      const h = histories.find(x=>(x.ID||x.Id)===histSpId);
+      if(h) { h[fieldName]=newVal; if(fieldName==='_x66f8__x985e_URL') h['OData__x66f8__x985e_URL']=newVal; }
+    } catch(err) { el.innerHTML=oldText; alert("保存に失敗しました: "+err.message); }
+  }
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", ev => {
+    if(ev.key==="Enter") input.blur();
+    if(ev.key==="Escape"){el.innerHTML=oldText; el.ondblclick=(ev2)=>editHistField(ev2,histSpId,fieldName,el,inputType);}
+  });
+}
+
+async function saveItem() {
+  const id = document.getElementById("f-id").value.trim();
+  const name = document.getElementById("f-name").value.trim();
+  if (!id || !name) { alert("管理番号と品名は必須です"); return; }
+  const body = {
+    Title: id,
+    field_2: document.getElementById("f-name").value.trim(),
+    field_3: document.getElementById("f-spec").value.trim(),
+    field_4: document.getElementById("f-sn").value.trim(),
+    field_5: document.getElementById("f-supplier").value.trim(),
+    field_6: document.getElementById("f-purchase").value || null,
+    field_10: document.getElementById("f-cycle").value,
+    field_8: document.getElementById("f-loc").value.trim(),
+    field_9: document.getElementById("f-manager").value.trim(),
+    field_12: document.getElementById("f-note").value.trim(),
+    OData__x5199__x771f_URL: document.getElementById("f-photo").value.trim()
+  };
+  try {
+    const base = `${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.listId}')/items`;
+    if (editingSpId) {
+      await spFetch(`${base}(${editingSpId})`, {
+        method: "PATCH",
+        headers: { "IF-MATCH": "*", "X-HTTP-Method": "MERGE" },
+        body: JSON.stringify(body)
+      });
+    } else {
+      await spFetch(base, { method: "POST", body: JSON.stringify(body) });
+    }
+    closeModal();
+    await loadData();
+    render();
+    setTimeout(showAnnounce, 500);
+  } catch(e) { alert("保存に失敗しました: " + e.message); }
+}
+
+async function saveHist() {
+  const instId = document.getElementById("h-inst-id").value;
+  const date = document.getElementById("h-date").value;
+  if (!date) { alert("校正日は必須です"); return; }
+  const body = {
+    Title: instId,
+    field_5: document.getElementById("h-org").value.trim(),
+    field_6: date || null,
+    field_9: document.getElementById("h-result").value.trim(),
+    field_10: document.getElementById("h-judge").value,
+    field_11: document.getElementById("h-next").value || null,
+    OData__x66f8__x985e_URL: document.getElementById("h-fileurl").value.trim()
+  };
+  try {
+    await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items`, {
+      method: "POST", body: JSON.stringify(body)
+    });
+    closeHistModal();
+    await loadData();
+    render();
+    setTimeout(showAnnounce, 500);
+  } catch(e) { alert("保存に失敗しました: " + e.message); }
+}
+
+// ── Modals ────────────────────────────────────────────
+function openAddModal() {
+  editingSpId = null;
+  document.getElementById("modal-title").textContent = "機器を追加";
+  ["f-id","f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("f-cycle").value = "1年";
+  document.getElementById("modal-overlay").classList.add("open");
+}
+function openEditModal(instId) {
+  const inst = instruments.find(i => i.Title === instId);
+  if (!inst) return;
+  editingSpId = inst.ID || inst.Id;
+  document.getElementById("modal-title").textContent = "機器情報を編集";
+  document.getElementById("f-sp-id").value = editingSpId;
+  document.getElementById("f-id").value = inst.Title || "";
+  document.getElementById("f-name").value = inst.field_2 || inst.Title || "";
+  document.getElementById("f-spec").value = inst.field_3 || "";
+  document.getElementById("f-sn").value = inst.field_4 || "";
+  document.getElementById("f-supplier").value = inst.field_5 || "";
+  document.getElementById("f-purchase").value = inst.field_6 ? inst.field_6.split("T")[0] : "";
+  document.getElementById("f-cycle").value = inst.field_10 || "1年";
+  document.getElementById("f-loc").value = inst.field_8 || "";
+  document.getElementById("f-manager").value = inst.field_9 || "";
+  document.getElementById("f-note").value = inst.field_12 || "";
+  document.getElementById("modal-overlay").classList.add("open");
+}
+function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
+
+function openHistModal(instId) {
+  document.getElementById("h-inst-id").value = instId;
+  document.getElementById("h-date").value = new Date().toISOString().split("T")[0];
+  const inst = instruments.find(i => i.Title === instId);
+  const last = getLastHist(instId);
+  document.getElementById("h-org").value = last ? last.field_5 || "" : (inst ? inst.field_5 || "" : "");
+  document.getElementById("h-result").value = "";
+  document.getElementById("h-judge").value = "OK";
+  document.getElementById("h-next").value = "";
+  document.getElementById("h-fileurl").value = "";
+  document.getElementById("hist-overlay").classList.add("open");
+}
+function closeHistModal() { document.getElementById("hist-overlay").classList.remove("open"); }
+
+async function clickThumb(id) {
+  const inst = instruments.find(i => i.Title === id);
+  const current = inst ? inst.OData__x5199__x771f_URL || "" : "";
+  const url = prompt("写真のOneDrive URLを入力してください（空白で削除）:", current);
+  if(url === null) return;
+  try {
+    const spId = inst.ID || inst.Id;
+    await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.listId}')/items(${spId})`, {
+      method: "PATCH",
+      headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+      body: JSON.stringify({"_x5199__x771f_URL": url.trim()})
+    });
+    inst.OData__x5199__x771f_URL = url.trim();
+    render();
+  } catch(e) { alert("保存に失敗しました: "+e.message); }
+}
+
+// ── Filter & Search ───────────────────────────────────
+document.querySelectorAll(".fbtn").forEach(b => {
+  b.addEventListener("click", () => {
+    filter = b.dataset.f;
+    document.querySelectorAll(".fbtn").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    render();
+  });
+});
+document.getElementById("search").addEventListener("input", e => { search = e.target.value; render(); });
+
+// ── App Init ──────────────────────────────────────────
+async function showApp() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("user-name").textContent = account.name || account.username;
+  try {
+    await loadData();
+    render();
+    setTimeout(showAnnounce, 500);
+  } catch(e) {
+    document.getElementById("list").innerHTML = `<div class="error-msg">データの読み込みに失敗しました: ${e.message}</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
