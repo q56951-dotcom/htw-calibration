@@ -288,6 +288,10 @@ input[type=file]{display:none}
     <div class="form-group"><label class="form-label">保管場所</label><input class="form-input" id="f-loc" placeholder="例：計測室 棚A"></div>
   </div>
   <div class="form-group"><label class="form-label">管理者</label><input class="form-input" id="f-manager" placeholder="例：魏誠志"></div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">規格値(mm)</label><input class="form-input" id="f-spec-val" placeholder="例：6.02mm"></div>
+    <div class="form-group"><label class="form-label">最大許容誤差(mm)</label><input class="form-input" id="f-tolerance" placeholder="例：±0.002"></div>
+  </div>
   <div class="form-group"><label class="form-label">写真URL（OneDriveの直接リンク）</label><input class="form-input" id="f-photo" placeholder="https://..."></div>
   <div class="form-group"><label class="form-label">備考</label><input class="form-input" id="f-note"></div>
   <div class="modal-actions">
@@ -987,6 +991,8 @@ async function saveItem() {
     field_12: document.getElementById("f-note").value.trim(),
     OData__x5199__x771f_URL: document.getElementById("f-photo").value.trim()
   };
+  const specVal = document.getElementById("f-spec-val").value.trim();
+  const tolerance = document.getElementById("f-tolerance").value.trim();
   try {
     const base = `${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.listId}')/items`;
     if (editingSpId) {
@@ -1036,7 +1042,7 @@ async function saveHist() {
 function openAddModal() {
   editingSpId = null;
   document.getElementById("modal-title").textContent = "機器を追加";
-  ["f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note"].forEach(id => document.getElementById(id).value = "");
+  ["f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note","f-spec-val","f-tolerance"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("f-cycle").value = "1年";
 
   // 次の管理番号を自動生成
