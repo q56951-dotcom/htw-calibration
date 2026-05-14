@@ -510,6 +510,7 @@ function render() {
           <div class="card-sub">校正機関: ${last?last.field_5||"—":"—"}　周期: ${inst.field_10||"—"}${inst.field_8?`　📍 ${inst.field_8}`:""}</div>
         </div>
         <span class="badge ${si.cls}">${si.label}</span>
+        <button class="act-btn danger" style="padding:2px 8px;font-size:11px;height:26px;margin-left:6px" onclick="event.stopPropagation();deleteInst('${inst.Title}','${inst.ID||inst.Id}')">削除</button>
         <span class="chev ${isOpen?"open":""}">&#9656;</span>
       </div>
       <div class="card-body ${isOpen?"open":""}">
@@ -798,7 +799,10 @@ async function saveEditHist() {
   const histSpId = parseInt(document.getElementById("eh-sp-id").value);
   const date = document.getElementById("eh-date").value;
   if(!date) { alert("校正日は必須です"); return; }
+  const hData = histories.find(x => (x.ID||x.Id) === histSpId);
+  const instData2 = hData ? instruments.find(i => i.Title === hData.Title) : null;
   const body = {
+    field_2: instData2 ? (instData2.field_2 || "") : "",
     field_5: document.getElementById("eh-org").value.trim(),
     field_6: date || null,
     field_9: document.getElementById("eh-result").value.trim(),
@@ -825,6 +829,32 @@ async function saveEditHist() {
     closeEditHistModal();
     render();
   } catch(e) { alert("保存に失敗しました: "+e.message); }
+}
+
+
+async function deleteInst(instId, spId) {
+  const inst = instruments.find(i => i.Title === instId);
+  const name = inst ? (inst.field_2 || instId) : instId;
+  if(!confirm(`「${instId}　${name}」を削除してもよいですか？\n関連する校正履歴も全て削除されます。\nこの操作は元に戻せません。`)) return;
+  try {
+    // Delete all related histories first
+    const hists = getHistories(instId);
+    if(hists.length > 0) {
+      await Promise.all(hists.map(h =>
+        spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${h.ID||h.Id})`, {
+          method: "DELETE", headers: {"IF-MATCH":"*"}
+        })
+      ));
+    }
+    // Delete instrument
+    await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.listId}')/items(${spId})`, {
+      method: "DELETE", headers: {"IF-MATCH":"*"}
+    });
+    instruments = instruments.filter(i => i.Title !== instId);
+    histories = histories.filter(h => h.Title !== instId);
+    if(openId === instId) openId = null;
+    render();
+  } catch(e) { alert("削除に失敗しました: "+e.message); }
 }
 
 function openPdf(key) {
@@ -931,8 +961,11 @@ async function saveHist() {
   const instId = document.getElementById("h-inst-id").value;
   const date = document.getElementById("h-date").value;
   if (!date) { alert("校正日は必須です"); return; }
+  // 品名を管理台帳から自動取得
+  const instData = instruments.find(i => i.Title === instId);
   const body = {
     Title: instId,
+    field_2: instData ? (instData.field_2 || "") : "",
     field_5: document.getElementById("h-org").value.trim(),
     field_6: date || null,
     field_9: document.getElementById("h-result").value.trim(),
