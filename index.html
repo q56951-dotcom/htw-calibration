@@ -55,7 +55,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;background:#f3f4f6;c
 .body-inner{padding:14px 14px 14px 74px}
 .sec-title{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px}
 .sec-title:first-child{margin-top:0}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 16px}
 .info-row{display:flex;flex-direction:column;gap:2px}
 .info-label{font-size:11px;color:#9ca3af}
 .info-value{font-size:13px;color:#1a1a1a}
@@ -525,7 +525,7 @@ function render() {
             <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row" style="grid-column:1/-1"><span class="info-label">備考</span><span class="info-value">${inst.field_12||"—"}</span></div>
           </div>
-          <div class="sec-title" style="margin-top:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <div class="sec-title" style="margin-top:16px;display:flex;align-items:center;gap:6px">
             <span>校正履歴</span>
             <span style="font-size:11px;color:#9ca3af;font-weight:400">(${hists.length}件)</span>
             <button class="hist-toggle-btn" onclick="event.stopPropagation();toggleHist('${inst.Title}')" id="hist-btn-${inst.Title}">${hists.length>1?"▼ 展開":"▼ 表示"}</button>
@@ -556,7 +556,7 @@ function render() {
               </tbody>
             </table>
           </div>
-          <div class="card-actions">
+          <div class="card-actions" style="justify-content:flex-end">
             <button class="act-btn primary" onclick="openHistModal('${inst.Title}')">＋ 校正記録を追加</button>
             <button class="act-btn" onclick="openEditModal('${inst.Title}')">✎ 編集</button>
           </div>
@@ -902,7 +902,7 @@ async function editHistField(e, histSpId, fieldName, el, inputType) {
       el.innerHTML = newVal==="OK"?`<span class="badge b-ok">OK</span>`:`<span class="badge b-danger">${newVal}</span>`;
     } else if(fieldName==='_x66f8__x985e_URL') {
       const pKey=`pdf_${histSpId}`; pdfUrls[pKey]=newVal;
-      el.innerHTML = newVal?`<button class="pdf-link" onclick="event.stopPropagation();openPdf('${pKey}')">📄 開く</button>`:`<span style="color:#9ca3af;font-size:11px">ダブルクリックで追加</span>`;
+      el.innerHTML = newVal?`<button class="pdf-link" onclick="event.stopPropagation();openPdf('${pKey}')">📄 開く</button>`:`<span style="color:#9ca3af">—</span>`;
     } else {
       el.textContent = newVal||"—";
     }
