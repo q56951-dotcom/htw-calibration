@@ -862,6 +862,47 @@ async function deleteInst(instId, spId) {
   } catch(e) { alert("削除に失敗しました: "+e.message); }
 }
 
+
+async function editSpecField(e, instId, fieldName, el) {
+  e.stopPropagation();
+  const oldVal = el.textContent === "—" ? "" : el.textContent;
+  const input = document.createElement("input");
+  input.className = "editable-input";
+  input.value = oldVal;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  async function save() {
+    const newVal = input.value.trim();
+    const span = document.createElement("span");
+    span.className = "info-value editable";
+    span.textContent = newVal || "—";
+    span.ondblclick = (ev) => editSpecField(ev, instId, fieldName, span);
+    input.replaceWith(span);
+    if(newVal === oldVal) return;
+    try {
+      // Update all histories for this instrument
+      const hists = getHistories(instId);
+      if(hists.length === 0) { alert("校正履歴がないため保存できません"); return; }
+      await Promise.all(hists.map(h =>
+        spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${h.ID||h.Id})`, {
+          method: "PATCH",
+          headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+          body: JSON.stringify({[fieldName]: newVal})
+        })
+      ));
+      // Update local cache
+      hists.forEach(h => h[fieldName] = newVal);
+    } catch(err) { alert("保存に失敗しました: "+err.message); }
+  }
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", e => {
+    if(e.key==="Enter") input.blur();
+    if(e.key==="Escape"){input.value=oldVal;input.blur();}
+  });
+}
+
 function openPdf(key) {
   const url = pdfUrls[key];
   if(url) window.open(url, '_blank');
