@@ -215,6 +215,7 @@ input[type=file]{display:none}
   <div style="display:flex;gap:8px;margin-top:4px">
     <button class="act-btn primary" id="detail-add-hist-btn">＋ 校正記録を追加</button>
     <button class="act-btn" id="detail-edit-btn">✎ 編集</button>
+    <button class="act-btn danger" id="detail-delete-btn">🗑 機器を削除</button>
   </div>
 </div>
 </div>
@@ -510,7 +511,6 @@ function render() {
           <div class="card-sub">校正機関: ${last?last.field_5||"—":"—"}　周期: ${inst.field_10||"—"}${inst.field_8?`　📍 ${inst.field_8}`:""}</div>
         </div>
         <span class="badge ${si.cls}">${si.label}</span>
-        <button class="act-btn danger" style="padding:2px 8px;font-size:11px;height:26px;margin-left:6px" onclick="event.stopPropagation();deleteInst('${inst.Title}','${inst.ID||inst.Id}')">削除</button>
         <span class="chev ${isOpen?"open":""}">&#9656;</span>
       </div>
       <div class="card-body ${isOpen?"open":""}">
@@ -697,6 +697,11 @@ function openDetail(instId) {
   // Buttons
   document.getElementById("detail-add-hist-btn").onclick = () => { closeDetail(); openHistModal(instId); };
   document.getElementById("detail-edit-btn").onclick = () => { closeDetail(); openEditModal(instId); };
+  document.getElementById("detail-delete-btn").onclick = () => {
+    const spId = inst.ID || inst.Id;
+    closeDetail();
+    deleteInst(instId, spId);
+  };
 
   document.getElementById("detail-overlay").classList.add("open");
 }
