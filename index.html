@@ -525,9 +525,9 @@ function render() {
             <div class="info-row"><span class="info-label">仕入先</span><span class="info-value">${inst.field_5||"—"}</span></div>
             <div class="info-row"><span class="info-label">製造番号</span><span class="info-value">${inst.field_4||"—"}</span></div>
             <div class="info-row"><span class="info-label">規格型式</span><span class="info-value">${inst.field_3||"—"}</span></div>
+            <div class="info-row"><span class="info-label">校正周期</span><span class="info-value">${inst.field_10||"—"}</span></div>
             <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
-            <div class="info-row"><span class="info-label">校正周期</span><span class="info-value">${inst.field_10||"—"}</span></div>
             <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row" style="grid-column:1/-1"><span class="info-label">備考</span><span class="info-value">${inst.field_12||"—"}</span></div>
@@ -608,14 +608,9 @@ function toggleHist(id) {
 }
 
 function toggle(id) {
-  const prevOpenId = openId;
   openId = openId === id ? null : id;
-
-  // Save scroll position before re-render
-  const scrollY = window.scrollY;
+  window.location.hash = openId || "";
   render();
-  // Restore scroll position (prevents jumping to top when collapsing)
-  window.scrollTo(0, scrollY);
 }
 
 // ── CRUD ──────────────────────────────────────────────
@@ -686,9 +681,9 @@ function openDetail(instId) {
     <div class="detail-row"><span class="detail-label">仕入先</span><span class="detail-value">${inst.field_5||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">製造番号</span><span class="detail-value">${inst.field_4||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">規格型式</span><span class="detail-value">${inst.field_3||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">校正周期</span><span class="detail-value">${inst.field_10||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">規格値(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">最大許容誤差(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
-    <div class="detail-row"><span class="detail-label">校正周期</span><span class="detail-value">${inst.field_10||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">前回校正日</span><span class="detail-value">${last?last.field_6?last.field_6.split("T")[0]:"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">次回校正予定日</span><span class="detail-value ${nc}">${last?last.field_11?last.field_11.split("T")[0]:"—":"—"}</span></div>
     ${inst.field_12?`<div class="detail-row" style="grid-column:1/-1"><span class="detail-label">備考</span><span class="detail-value">${inst.field_12}</span></div>`:""}
@@ -1065,7 +1060,7 @@ async function saveHist() {
 function openAddModal() {
   editingSpId = null;
   document.getElementById("modal-title").textContent = "機器を追加";
-  ["f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note","f-spec-val","f-tolerance"].forEach(id => document.getElementById(id).value = "");
+  ["f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note","f-spec-val","f-tolerance","f-photo"].forEach(id => { const el=document.getElementById(id); if(el) el.value=""; });
   document.getElementById("f-cycle").value = "1年";
 
   // 次の管理番号を自動生成
@@ -1106,6 +1101,8 @@ function closeModal() { document.getElementById("modal-overlay").classList.remov
 function openHistModal(instId) {
   document.getElementById("h-inst-id").value = instId;
   document.getElementById("h-date").value = new Date().toISOString().split("T")[0];
+  const inst = instruments.find(i => i.Title === instId);
+  const last = getLastHist(instId);
   document.getElementById("h-org").value = "";
   document.getElementById("h-result").value = "";
   document.getElementById("h-judge").value = "OK";
