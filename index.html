@@ -955,8 +955,22 @@ async function saveHist() {
 function openAddModal() {
   editingSpId = null;
   document.getElementById("modal-title").textContent = "機器を追加";
-  ["f-id","f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note"].forEach(id => document.getElementById(id).value = "");
+  ["f-name","f-spec","f-sn","f-supplier","f-purchase","f-loc","f-manager","f-note"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("f-cycle").value = "1年";
+
+  // 次の管理番号を自動生成
+  try {
+    const nums = instruments
+      .map(i => i.Title || "")
+      .filter(t => /^HTW-ME\d+$/.test(t))
+      .map(t => parseInt(t.replace("HTW-ME", "")))
+      .filter(n => !isNaN(n));
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    document.getElementById("f-id").value = "HTW-ME" + String(next).padStart(3, "0");
+  } catch(e) {
+    document.getElementById("f-id").value = "";
+  }
+
   document.getElementById("modal-overlay").classList.add("open");
 }
 function openEditModal(instId) {
