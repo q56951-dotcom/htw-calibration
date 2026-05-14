@@ -272,12 +272,16 @@ input[type=file]{display:none}
     <div class="form-group"><label class="form-label">品名 *</label><input class="form-input" id="f-name" placeholder="デジタルノギス"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label class="form-label">規格型式</label><input class="form-input" id="f-spec" placeholder="例：19811 / 200mm"></div>
+    <div class="form-group"><label class="form-label">仕入先</label><input class="form-input" id="f-supplier" placeholder="例：シンワ"></div>
     <div class="form-group"><label class="form-label">製造番号</label><input class="form-input" id="f-sn" placeholder="例：ABC12345"></div>
   </div>
   <div class="form-row">
-    <div class="form-group"><label class="form-label">仕入先</label><input class="form-input" id="f-supplier" placeholder="例：シンワ"></div>
+    <div class="form-group"><label class="form-label">規格型式</label><input class="form-input" id="f-spec" placeholder="例：19811 / 200mm"></div>
     <div class="form-group"><label class="form-label">購入日</label><input class="form-input" type="date" id="f-purchase"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label class="form-label">規格値(mm)</label><input class="form-input" id="f-spec-val" placeholder="例：6.02mm"></div>
+    <div class="form-group"><label class="form-label">最大許容誤差(mm)</label><input class="form-input" id="f-tolerance" placeholder="例：±0.002"></div>
   </div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">校正周期</label>
@@ -288,10 +292,6 @@ input[type=file]{display:none}
     <div class="form-group"><label class="form-label">保管場所</label><input class="form-input" id="f-loc" placeholder="例：計測室 棚A"></div>
   </div>
   <div class="form-group"><label class="form-label">管理者</label><input class="form-input" id="f-manager" placeholder="例：魏誠志"></div>
-  <div class="form-row">
-    <div class="form-group"><label class="form-label">規格値(mm)</label><input class="form-input" id="f-spec-val" placeholder="例：6.02mm"></div>
-    <div class="form-group"><label class="form-label">最大許容誤差(mm)</label><input class="form-input" id="f-tolerance" placeholder="例：±0.002"></div>
-  </div>
   <div class="form-group"><label class="form-label">写真URL（OneDriveの直接リンク）</label><input class="form-input" id="f-photo" placeholder="https://..."></div>
   <div class="form-group"><label class="form-label">備考</label><input class="form-input" id="f-note"></div>
   <div class="modal-actions">
@@ -522,13 +522,13 @@ function render() {
           <div class="sec-title">基本情報</div>
           <div class="info-grid">
             <div class="info-row"><span class="info-label">管理番号</span><span class="info-value">${inst.Title||"—"}</span></div>
+            <div class="info-row"><span class="info-label">仕入先</span><span class="info-value">${inst.field_5||"—"}</span></div>
             <div class="info-row"><span class="info-label">製造番号</span><span class="info-value">${inst.field_4||"—"}</span></div>
             <div class="info-row"><span class="info-label">規格型式</span><span class="info-value">${inst.field_3||"—"}</span></div>
-            <div class="info-row"><span class="info-label">仕入先</span><span class="info-value">${inst.field_5||"—"}</span></div>
-            <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
-            <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value editable" style="white-space:pre-line" ondblclick="editSpecField(event,'${inst.Title}','field_7',this)">${last?last.field_7||"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value editable" style="white-space:pre-line" ondblclick="editSpecField(event,'${inst.Title}','field_8',this)">${last?last.field_8||"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row" style="grid-column:1/-1"><span class="info-label">備考</span><span class="info-value">${inst.field_12||"—"}</span></div>
           </div>
           <div class="sec-title" style="margin-top:16px;display:flex;align-items:center;gap:6px">
@@ -677,9 +677,11 @@ function openDetail(instId) {
   // Info grid
   document.getElementById("detail-info").innerHTML = `
     <div class="detail-row"><span class="detail-label">管理番号</span><span class="detail-value">${inst.Title||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">仕入先</span><span class="detail-value">${inst.field_5||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">製造番号</span><span class="detail-value">${inst.field_4||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">規格型式</span><span class="detail-value">${inst.field_3||"—"}</span></div>
-    <div class="detail-row"><span class="detail-label">仕入先</span><span class="detail-value">${inst.field_5||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">規格値(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">最大許容誤差(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">前回校正日</span><span class="detail-value">${last?last.field_6?last.field_6.split("T")[0]:"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">次回校正予定日</span><span class="detail-value ${nc}">${last?last.field_11?last.field_11.split("T")[0]:"—":"—"}</span></div>
     ${inst.field_12?`<div class="detail-row" style="grid-column:1/-1"><span class="detail-label">備考</span><span class="detail-value">${inst.field_12}</span></div>`:""}
