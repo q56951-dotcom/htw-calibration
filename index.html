@@ -525,8 +525,8 @@ function render() {
             <div class="info-row"><span class="info-label">仕入先</span><span class="info-value">${inst.field_5||"—"}</span></div>
             <div class="info-row"><span class="info-label">製造番号</span><span class="info-value">${inst.field_4||"—"}</span></div>
             <div class="info-row"><span class="info-label">規格型式</span><span class="info-value">${inst.field_3||"—"}</span></div>
-            <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value editable" style="white-space:pre-line" ondblclick="editSpecField(event,'${inst.Title}','field_7',this)">${last?last.field_7||"—":"—"}</span></div>
-            <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value editable" style="white-space:pre-line" ondblclick="editSpecField(event,'${inst.Title}','field_8',this)">${last?last.field_8||"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row" style="grid-column:1/-1"><span class="info-label">備考</span><span class="info-value">${inst.field_12||"—"}</span></div>
@@ -1005,6 +1005,20 @@ async function saveItem() {
       });
     } else {
       await spFetch(base, { method: "POST", body: JSON.stringify(body) });
+    }
+    // Update spec fields in all histories if provided
+    if(specVal || tolerance) {
+      const instIdToUpdate = document.getElementById("f-id").value.trim();
+      const hists = getHistories(instIdToUpdate);
+      if(hists.length > 0) {
+        await Promise.all(hists.map(h =>
+          spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${h.ID||h.Id})`, {
+            method: "PATCH",
+            headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+            body: JSON.stringify({field_7: specVal, field_8: tolerance})
+          })
+        ));
+      }
     }
     closeModal();
     await loadData();
