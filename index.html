@@ -523,6 +523,8 @@ function render() {
             <div class="info-row"><span class="info-label">仕入先</span><span class="info-value">${inst.field_5||"—"}</span></div>
             <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value editable" style="white-space:pre-line" ondblclick="editSpecField(event,'${inst.Title}','field_7',this)">${last?last.field_7||"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value editable" style="white-space:pre-line" ondblclick="editSpecField(event,'${inst.Title}','field_8',this)">${last?last.field_8||"—":"—"}</span></div>
             <div class="info-row" style="grid-column:1/-1"><span class="info-label">備考</span><span class="info-value">${inst.field_12||"—"}</span></div>
           </div>
           <div class="sec-title" style="margin-top:16px;display:flex;align-items:center;gap:6px">
