@@ -558,7 +558,7 @@ function render() {
             </span>
             <span style="display:inline-flex;align-items:center;gap:3px">
               <span style="font-size:11px;color:#9ca3af">使用状態:</span>
-              ${getUsageStatusBadge(inst.field_13||"使用中")}
+              ${getUsageStatusBadge(inst.field_11||"使用中")}
             </span>
             ${inst.field_8?`<span style="display:inline-flex;align-items:center;gap:3px"><span style="font-size:11px;color:#9ca3af">場所:</span><span style="font-size:11px;color:#374151">📍 ${inst.field_8}</span></span>`:""}
           </div>
@@ -721,7 +721,7 @@ function openDetail(instId) {
   document.getElementById("detail-sub").innerHTML = `
     <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
       ${getCycleBadge(inst.field_10||"—")}
-      ${getUsageStatusBadge(inst.field_13||"使用中")}
+      ${getUsageStatusBadge(inst.field_11||"使用中")}
       ${inst.field_8?`<span style="font-size:12px;color:#6b7280">📍 ${inst.field_8}</span>`:""}
     </span>`;
   // badge removed from detail header
@@ -735,7 +735,7 @@ function openDetail(instId) {
     <div class="detail-row"><span class="detail-label">規格値(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">最大許容誤差(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">校正周期</span><span class="detail-value">${inst.field_10||"—"}</span></div>
-    <div class="detail-row"><span class="detail-label">使用状態</span><span class="detail-value">${inst.field_13||"使用中"}</span></div>
+    <div class="detail-row"><span class="detail-label">使用状態</span><span class="detail-value">${inst.field_11||"使用中"}</span></div>
     <div class="detail-row"><span class="detail-label">前回校正日</span><span class="detail-value">${last?last.field_6?last.field_6.split("T")[0]:"—":"—"}</span></div>
     <div class="detail-row"><span class="detail-label">次回校正予定日</span><span class="detail-value ${nc}">${last?last.field_11?last.field_11.split("T")[0]:"—":"—"}</span></div>
     ${inst.field_12?`<div class="detail-row" style="grid-column:1/-1"><span class="detail-label">備考</span><span class="detail-value">${inst.field_12}</span></div>`:""}
@@ -1045,7 +1045,7 @@ async function saveItem() {
     field_8: document.getElementById("f-loc").value.trim(),
     field_9: document.getElementById("f-manager").value.trim(),
     field_12: document.getElementById("f-note").value.trim(),
-    field_13: document.getElementById("f-status").value,
+    field_11: document.getElementById("f-status").value,
     "OData__x5199__x771f_URL": document.getElementById("f-photo").value.trim()
   };
   const specVal = document.getElementById("f-spec-val").value.trim();
@@ -1161,7 +1161,8 @@ function openEditModal(instId) {
   // 規格値・最大許容誤差は最新の校正履歴から読み込む
   document.getElementById("f-spec-val").value = last ? last.field_7 || "" : "";
   document.getElementById("f-tolerance").value = last ? last.field_8 || "" : "";
-  document.getElementById("f-status").value = inst.field_13 || "使用中";
+  document.getElementById("f-status").value = inst.field_11 || "使用中";
+  document.getElementById("f-photo").value = inst.OData__x5199__x771f_URL || "";
   document.getElementById("modal-overlay").classList.add("open");
 }
 function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
