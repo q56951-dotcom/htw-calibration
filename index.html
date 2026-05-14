@@ -551,10 +551,16 @@ function render() {
         </div>
         <div class="card-info" style="cursor:pointer" onclick="event.stopPropagation();openDetail('${inst.Title}')">
           <div class="card-title">${inst.Title}　${inst.field_2||""}</div>
-          <div class="card-sub" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">
-            ${getCycleBadge(inst.field_10||"—")}
-            ${getUsageStatusBadge(inst.field_13||"使用中")}
-            ${inst.field_8?`<span style="font-size:11px;color:#6b7280">📍 ${inst.field_8}</span>`:""}
+          <div class="card-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <span style="font-size:11px;color:#9ca3af">校正周期:</span>
+              ${getCycleBadge(inst.field_10||"—")}
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:3px">
+              <span style="font-size:11px;color:#9ca3af">使用状態:</span>
+              ${getUsageStatusBadge(inst.field_13||"使用中")}
+            </span>
+            ${inst.field_8?`<span style="display:inline-flex;align-items:center;gap:3px"><span style="font-size:11px;color:#9ca3af">場所:</span><span style="font-size:11px;color:#374151">📍 ${inst.field_8}</span></span>`:""}
           </div>
         </div>
         <span class="chev ${isOpen?"open":""}">&#9656;</span>
@@ -1040,7 +1046,7 @@ async function saveItem() {
     field_9: document.getElementById("f-manager").value.trim(),
     field_12: document.getElementById("f-note").value.trim(),
     field_13: document.getElementById("f-status").value,
-    "_x5199__x771f_URL": document.getElementById("f-photo").value.trim()
+    "OData__x5199__x771f_URL": document.getElementById("f-photo").value.trim()
   };
   const specVal = document.getElementById("f-spec-val").value.trim();
   const tolerance = document.getElementById("f-tolerance").value.trim();
@@ -1182,7 +1188,7 @@ async function clickThumb(id) {
     await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.listId}')/items(${spId})`, {
       method: "PATCH",
       headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
-      body: JSON.stringify({"_x5199__x771f_URL": url.trim()})
+      body: JSON.stringify({"OData__x5199__x771f_URL": url.trim()})
     });
     inst.OData__x5199__x771f_URL = url.trim();
     render();
