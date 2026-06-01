@@ -621,6 +621,22 @@ function getPhotoUrl(instId) {
   return "";
 }
 
+// 規格値・最大許容誤差は固定情報のため、値が入っている記録から取得（最新の空欄に影響されない）
+function getSpecVal(instId) {
+  const hists = getHistories(instId);
+  for (const h of hists) {
+    if (h.field_7) return h.field_7;
+  }
+  return "";
+}
+function getTolerance(instId) {
+  const hists = getHistories(instId);
+  for (const h of hists) {
+    if (h.field_8) return h.field_8;
+  }
+  return "";
+}
+
 const today = new Date();
 function daysDiff(ds) {
   if (!ds) return null;
@@ -738,8 +754,8 @@ function render() {
       <div class="card-body ${isOpen?"open":""}">
         <div class="body-inner">
           <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:12px">
-            <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
-            <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
+            <div class="info-row"><span class="info-label">規格値(mm)</span><span class="info-value" style="white-space:pre-line">${getSpecVal(inst.Title)||"—"}</span></div>
+            <div class="info-row"><span class="info-label">最大許容誤差(mm)</span><span class="info-value" style="white-space:pre-line">${getTolerance(inst.Title)||"—"}</span></div>
             <div class="info-row"><span class="info-label">前回校正日</span><span class="info-value">${last?last.field_6?last.field_6.split('T')[0]:"—":"—"}</span></div>
             <div class="info-row"><span class="info-label">次回校正予定日</span><span class="info-value ${nc}">${last?last.field_11?last.field_11.split('T')[0]:"—":"—"}</span></div>
           </div>
@@ -754,6 +770,24 @@ function render() {
               <table class="hist">
                 <thead><tr><th>校正日</th><th>校正機関</th><th>校正結果</th><th>判定</th><th>次回予定</th><th>書類</th><th></th></tr></thead>
                 <tbody>${histRows}</tbody>
+              </table>
+            </div>
+          </div>
+          <div id="hist-summary-${inst.Title}" style="display:${hists.length<=1?'none':'block'}">
+            <div class="hist-wrap">
+              <table class="hist">
+                <thead><tr><th>校正日</th><th>校正機関</th><th>校正結果</th><th>判定</th><th>次回予定</th><th>書類</th></tr></thead>
+                <tbody>${hists.length?`
+                  <tr>
+                    <td>${hists[0].field_6?hists[0].field_6.split('T')[0]:"—"}</td>
+                    <td>${hists[0].field_5||"—"}</td>
+                    <td>${hists[0].field_9||"—"}</td>
+                    <td><span class="badge ${hists[0].field_10==="OK"?"b-ok":"b-danger"}">${hists[0].field_10||"—"}</span></td>
+                    <td>${hists[0].field_11?hists[0].field_11.split('T')[0]:"—"}</td>
+                    <td>${hists[0].OData__x66f8__x985e_URL?`<button class="pdf-link" onclick="event.stopPropagation();openPdf('pdf_${hists[0].ID||hists[0].Id}')">📄 開く</button>`:`<span style="color:#9ca3af">—</span>`}</td>
+                  </tr>
+                  <tr><td colspan="6" style="text-align:center;padding:4px;font-size:11px;color:#9ca3af">最新の1件を表示中 ・ 他 ${hists.length-1} 件の履歴あり</td></tr>
+                `:""}</tbody>
               </table>
             </div>
           </div>
@@ -794,11 +828,21 @@ function updateStats() {
 
 function toggleHist(id) {
   const wrap = document.getElementById("hist-wrap-"+id);
+  const summary = document.getElementById("hist-summary-"+id);
   const btn = document.getElementById("hist-btn-"+id);
   if(!wrap||!btn) return;
   const isOpen = wrap.style.display !== "none";
-  wrap.style.display = isOpen ? "none" : "block";
-  btn.textContent = isOpen ? "▼ 展開" : "▲ 折りたたむ";
+  if(isOpen) {
+    // 折りたたむ → 完全リスト隠す、要約表示
+    wrap.style.display = "none";
+    if(summary) summary.style.display = "block";
+    btn.textContent = "▼ 展開";
+  } else {
+    // 展開 → 完全リスト表示、要約隠す
+    wrap.style.display = "block";
+    if(summary) summary.style.display = "none";
+    btn.textContent = "▲ 折りたたむ";
+  }
 }
 
 function toggle(id) {
@@ -986,8 +1030,8 @@ function openDetail(instId) {
     <div class="detail-row"><span class="detail-label">仕入先</span><span class="detail-value">${inst.field_5||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">製造番号</span><span class="detail-value">${inst.field_4||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">規格型式</span><span class="detail-value">${inst.field_3||"—"}</span></div>
-    <div class="detail-row"><span class="detail-label">規格値(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_7||"—":"—"}</span></div>
-    <div class="detail-row"><span class="detail-label">最大許容誤差(mm)</span><span class="detail-value" style="white-space:pre-line">${last?last.field_8||"—":"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">規格値(mm)</span><span class="detail-value" style="white-space:pre-line">${getSpecVal(instId)||"—"}</span></div>
+    <div class="detail-row"><span class="detail-label">最大許容誤差(mm)</span><span class="detail-value" style="white-space:pre-line">${getTolerance(instId)||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">校正周期</span><span class="detail-value">${inst.field_10||"—"}</span></div>
     <div class="detail-row"><span class="detail-label">使用状態</span><span class="detail-value">${inst.field_11||"使用中"}</span></div>
     <div class="detail-row"><span class="detail-label">前回校正日</span><span class="detail-value">${last?last.field_6?last.field_6.split("T")[0]:"—":"—"}</span></div>
@@ -1356,11 +1400,16 @@ async function saveHist() {
   const instData = instruments.find(i => i.Title === instId);
   // 既存の写真URLを引き継ぐ（設備の外観写真は変わらないため）
   const existingPhoto = getPhotoUrl(instId);
+  // 規格値・許容誤差も固定情報のため引き継ぐ
+  const existingSpec = getSpecVal(instId);
+  const existingTol = getTolerance(instId);
   const body = {
     Title: instId,
     field_2: instData ? (instData.field_2 || "") : "",
     field_5: document.getElementById("h-org").value.trim(),
     field_6: date || null,
+    field_7: existingSpec || "",
+    field_8: existingTol || "",
     field_9: document.getElementById("h-result").value.trim(),
     field_10: document.getElementById("h-judge").value,
     field_11: document.getElementById("h-next").value || null,
@@ -1419,8 +1468,8 @@ function openEditModal(instId) {
   document.getElementById("f-manager").value = inst.field_9 || "";
   document.getElementById("f-note").value = inst.field_12 || "";
   // 規格値・最大許容誤差は最新の校正履歴から読み込む
-  document.getElementById("f-spec-val").value = last ? last.field_7 || "" : "";
-  document.getElementById("f-tolerance").value = last ? last.field_8 || "" : "";
+  document.getElementById("f-spec-val").value = getSpecVal(instId) || "";
+  document.getElementById("f-tolerance").value = getTolerance(instId) || "";
   document.getElementById("f-status").value = inst.field_11 || "使用中";
   document.getElementById("f-photo").value = getPhotoUrl(instId) || "";
   document.getElementById("modal-overlay").classList.add("open");
