@@ -345,7 +345,6 @@ input[type=file]{display:none}
   <div style="display:flex;gap:8px;margin-top:4px">
     <button class="act-btn primary" id="detail-add-hist-btn">＋ 校正記録を追加</button>
     <button class="act-btn" id="detail-edit-btn">✎ 編集</button>
-    <button class="act-btn" id="detail-print-btn" onclick="printLabel()">🏷 ラベル印刷</button>
     <button class="act-btn danger" id="detail-delete-btn">🗑 機器を削除</button>
   </div>
 </div>
@@ -1115,11 +1114,26 @@ async function deleteHist(histSpId, instId) {
   const dateStr = h && h.field_6 ? h.field_6.split('T')[0] : histSpId;
   if(!confirm(`校正履歴「${dateStr}」を削除してもよいですか？\nこの操作は元に戻せません。`)) return;
   try {
+    // 削除対象が最新記録かどうか確認
+    const wasLatest = h && h.OData__x6700__x65b0__x7d00__x9304_ === true;
     await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${histSpId})`, {
       method: "DELETE",
       headers: {"IF-MATCH":"*"}
     });
     histories = histories.filter(x => (x.ID||x.Id) !== histSpId);
+    // 最新記録を削除した場合、次の最新記録を自動設定
+    if (wasLatest) {
+      const remaining = getHistories(instId);
+      if (remaining.length > 0) {
+        const newLatest = remaining[0]; // getHistoriesはfield_6降順なので最新が先頭
+        await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${newLatest.ID||newLatest.Id})`, {
+          method: "PATCH",
+          headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+          body: JSON.stringify({ OData__x6700__x65b0__x7d00__x9304_: true })
+        });
+        newLatest.OData__x6700__x65b0__x7d00__x9304_ = true;
+      }
+    }
     render();
   } catch(e) { alert("削除に失敗しました: "+e.message); }
 }
