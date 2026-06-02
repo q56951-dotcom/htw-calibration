@@ -475,6 +475,10 @@ input[type=file]{display:none}
 <div class="modal">
   <h2>校正記録を追加</h2>
   <input type="hidden" id="h-inst-id">
+  <div class="form-group" id="h-cycle-group" style="margin-bottom:8px">
+    <label class="form-label">校正周期</label>
+    <input class="form-input" id="h-cycle-display" readonly style="background:#f9fafb;color:#6b7280;cursor:default">
+  </div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="h-date" onchange="autoCalcNext()"></div>
     <div class="form-group"><label class="form-label">校正機関</label><input class="form-input" id="h-org" placeholder="SGS / 自社..."></div>
@@ -1518,13 +1522,20 @@ function openEditModal(instId) {
 function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); }
 
 function openHistModal(instId) {
+  const inst = instruments.find(i => i.Title === instId);
   document.getElementById("h-inst-id").value = instId;
   document.getElementById("h-date").value = new Date().toISOString().split("T")[0];
-  document.getElementById("h-org").value = "";
+  document.getElementById("h-org").value = inst ? (inst.field_5 || "") : "";
   document.getElementById("h-result").value = "";
   document.getElementById("h-judge").value = "OK";
-  document.getElementById("h-next").value = "";
   document.getElementById("h-fileurl").value = "";
+  // 校正周期を表示
+  const cycle = inst ? (inst.field_10 || "—") : "—";
+  document.getElementById("h-cycle-display").value = cycle;
+  // 次回校正日を自動計算
+  const today = new Date().toISOString().split("T")[0];
+  const next = calcNextDate(today, cycle);
+  document.getElementById("h-next").value = next || "";
   document.getElementById("hist-overlay").classList.add("open");
 }
 function closeHistModal() { document.getElementById("hist-overlay").classList.remove("open"); }
