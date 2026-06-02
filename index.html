@@ -475,10 +475,6 @@ input[type=file]{display:none}
 <div class="modal">
   <h2>校正記録を追加</h2>
   <input type="hidden" id="h-inst-id">
-  <div class="form-group" id="h-cycle-group" style="margin-bottom:8px">
-    <label class="form-label">校正周期</label>
-    <input class="form-input" id="h-cycle-display" readonly style="background:#f9fafb;color:#6b7280;cursor:default">
-  </div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="h-date" onchange="autoCalcNext()"></div>
     <div class="form-group"><label class="form-label">校正機関</label><input class="form-input" id="h-org" placeholder="SGS / 自社..."></div>
@@ -1441,6 +1437,7 @@ async function saveHist() {
   const body = {
     Title: instId,
     field_2: instData ? (instData.field_2 || "") : "",
+    field_4: instData ? (instData.field_10 || "") : "",
     field_5: document.getElementById("h-org").value.trim(),
     field_6: date || null,
     field_7: existingSpec || "",
@@ -1529,9 +1526,8 @@ function openHistModal(instId) {
   document.getElementById("h-result").value = "";
   document.getElementById("h-judge").value = "OK";
   document.getElementById("h-fileurl").value = "";
-  // 校正周期を表示
-  const cycle = inst ? (inst.field_10 || "—") : "—";
-  document.getElementById("h-cycle-display").value = cycle;
+  // 校正周期を取得して次回校正日を自動計算
+  const cycle = inst ? (inst.field_10 || "") : "";
   // 次回校正日を自動計算
   const today = new Date().toISOString().split("T")[0];
   const next = calcNextDate(today, cycle);
