@@ -405,7 +405,7 @@ input[type=file]{display:none}
   <h2>校正記録を編集</h2>
   <input type="hidden" id="eh-sp-id">
   <div class="form-row">
-    <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="eh-date"></div>
+    <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="eh-date" onchange="autoCalcNextEdit()"></div>
     <div class="form-group"><label class="form-label">校正機関</label><input class="form-input" id="eh-org" placeholder="SGS / 自社..."></div>
   </div>
   <div class="form-row">
@@ -477,7 +477,7 @@ input[type=file]{display:none}
   <h2>校正記録を追加</h2>
   <input type="hidden" id="h-inst-id">
   <div class="form-row">
-    <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="h-date"></div>
+    <div class="form-group"><label class="form-label">校正日 *</label><input class="form-input" type="date" id="h-date" onchange="autoCalcNext()"></div>
     <div class="form-group"><label class="form-label">校正機関</label><input class="form-input" id="h-org" placeholder="SGS / 自社..."></div>
   </div>
   <div class="form-row">
@@ -1160,6 +1160,24 @@ function closeEditHistModal() {
   document.getElementById("edit-hist-overlay").classList.remove("open");
 }
 
+// 次回校正日を自動計算（校正日 + 周期、週末なら金曜日に戻す）
+function calcNextDate(dateStr, cycle) {
+  if (!dateStr || !cycle) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return "";
+  // 周期に応じて加算
+  if (cycle === "1年") d.setFullYear(d.getFullYear() + 1);
+  else if (cycle === "2年") d.setFullYear(d.getFullYear() + 2);
+  else if (cycle === "半年") d.setMonth(d.getMonth() + 6);
+  else return ""; // 校正不要・管理外
+  // 週末チェック: 土曜(6)→金曜(-1日)、日曜(0)→金曜(-2日)
+  const dow = d.getDay();
+  if (dow === 6) d.setDate(d.getDate() - 1);
+  else if (dow === 0) d.setDate(d.getDate() - 2);
+  // yyyy-MM-dd形式で返す
+  return d.toISOString().split("T")[0];
+}
+
 async function saveEditHist() {
   const histSpId = parseInt(document.getElementById("eh-sp-id").value);
   const date = document.getElementById("eh-date").value;
@@ -1485,6 +1503,27 @@ function openHistModal(instId) {
   document.getElementById("hist-overlay").classList.add("open");
 }
 function closeHistModal() { document.getElementById("hist-overlay").classList.remove("open"); }
+
+// 校正記録追加モーダル: 校正日変更時に次回校正日を自動計算
+function autoCalcNext() {
+  const dateStr = document.getElementById("h-date").value;
+  const instId = document.getElementById("h-inst-id").value;
+  const inst = instruments.find(i => i.Title === instId);
+  const cycle = inst ? (inst.field_10 || "") : "";
+  const next = calcNextDate(dateStr, cycle);
+  if (next) document.getElementById("h-next").value = next;
+}
+
+// 校正記録編集モーダル: 校正日変更時に次回校正日を自動計算
+function autoCalcNextEdit() {
+  const dateStr = document.getElementById("eh-date").value;
+  const histSpId = parseInt(document.getElementById("eh-sp-id").value);
+  const h = histories.find(x => (x.ID||x.Id) === histSpId);
+  const inst = h ? instruments.find(i => i.Title === h.Title) : null;
+  const cycle = inst ? (inst.field_10 || "") : "";
+  const next = calcNextDate(dateStr, cycle);
+  if (next) document.getElementById("eh-next").value = next;
+}
 
 async function clickThumb(id) {
   const inst = instruments.find(i => i.Title === id);
