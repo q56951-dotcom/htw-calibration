@@ -1431,9 +1431,20 @@ async function saveHist() {
     field_10: document.getElementById("h-judge").value,
     field_11: document.getElementById("h-next").value || null,
     OData__x66f8__x985e_URL: document.getElementById("h-fileurl").value.trim(),
-    OData__x8a08__x6e2c__x5668__x5199__x77: existingPhoto || ""
+    OData__x8a08__x6e2c__x5668__x5199__x77: existingPhoto || "",
+    OData__x6700__x65b0__x7d00__x9304_: true
   };
   try {
+    // 既存の同機器の記録を全て「最新でない」に更新
+    const oldHists = getHistories(instId);
+    await Promise.all(oldHists.map(h =>
+      spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items(${h.ID||h.Id})`, {
+        method: "PATCH",
+        headers: {"IF-MATCH":"*","X-HTTP-Method":"MERGE"},
+        body: JSON.stringify({ OData__x6700__x65b0__x7d00__x9304_: false })
+      })
+    ));
+    // 新しい記録を追加（最新フラグ=true）
     await spFetch(`${CONFIG.siteUrl}/_api/web/lists(guid'${CONFIG.histListId}')/items`, {
       method: "POST", body: JSON.stringify(body)
     });
